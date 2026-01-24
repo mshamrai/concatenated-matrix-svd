@@ -198,7 +198,7 @@ This work uses datasets from:
 - HuggingFace for pretrained model weights
 
 ## Citation
-
+```
 @article{shamrai2026concatenated,
   title={Concatenated Matrix SVD: Compression Bounds, Incremental Approximation, and Error-Constrained Clustering},
   author={Shamrai, Maksym},
@@ -206,3 +206,4 @@ This work uses datasets from:
   year={2026},
   url={https://arxiv.org/abs/2601.11626}
 }
+```
