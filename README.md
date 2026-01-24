@@ -1,5 +1,7 @@
 # Concatenated Matrix SVD
 
+[![arXiv](https://img.shields.io/badge/arXiv-2601.11626-b31b1b.svg)](https://arxiv.org/abs/2601.11626)
+
 Official implementation of **"Concatenated Matrix SVD: Compression Bounds, Incremental Approximation, and Error-Constrained Clustering"**.
 
 This repository provides algorithms for clustering matrix blocks under error constraints, with applications to data compression, neural network weight compression, and scientific data analysis. The methods enable efficient low-rank approximation of concatenated matrices without explicitly forming the full matrix.
@@ -194,3 +196,13 @@ This work uses datasets from:
 - BigEarthNet for satellite imagery
 - PDEBench for PDE simulation data
 - HuggingFace for pretrained model weights
+
+## Citation
+
+@article{shamrai2026concatenated,
+  title={Concatenated Matrix SVD: Compression Bounds, Incremental Approximation, and Error-Constrained Clustering},
+  author={Shamrai, Maksym},
+  journal={arXiv preprint arXiv:2601.11626},
+  year={2026},
+  url={https://arxiv.org/abs/2601.11626}
+}
