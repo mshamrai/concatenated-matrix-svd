@@ -1,0 +1,1 @@
+python -m src.error_estimations --dataset smolvlm --r_target 32 --min_cluster_size 64 --max_cluster_size 1024 --step 32 --num_trials 10 --output smolvlm_error_estimations.csv
