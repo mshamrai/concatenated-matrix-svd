@@ -108,7 +108,7 @@ class ApproximateTorchClusterAlgorithm(BaseClusterAlgorithm):
         A_new,
         Q=None,
         S=None,
-    ) -> Tuple[np.ndarray, Optional["torch.Tensor"], Optional["torch.Tensor"]]:
+    ) -> Tuple["torch.Tensor", Optional["torch.Tensor"], Optional["torch.Tensor"]]:
         if Q is None or S is None:
             Q0, R0 = torch.linalg.qr(A_new, mode="reduced")
             S0 = R0 @ R0.T
@@ -118,7 +118,11 @@ class ApproximateTorchClusterAlgorithm(BaseClusterAlgorithm):
 
             pos = w > self.tol
             if not torch.any(pos):
-                return np.zeros(0, dtype=float), None, None
+                return torch.zeros(
+                    0,
+                    device=self.resolved_device_,
+                    dtype=self.resolved_torch_dtype_,
+                ), None, None
 
             w_pos = w[pos]
             U_pos = U[:, pos]
@@ -135,7 +139,7 @@ class ApproximateTorchClusterAlgorithm(BaseClusterAlgorithm):
             S_new = torch.diag(lam)
 
             singular_vals = torch.sqrt(lam[: min(self.r_target, len(lam))])
-            return singular_vals.detach().cpu().numpy(), Q_new, S_new
+            return singular_vals, Q_new, S_new
 
         r_curr = S.shape[0]
 
@@ -172,7 +176,11 @@ class ApproximateTorchClusterAlgorithm(BaseClusterAlgorithm):
 
         pos = w > self.tol
         if not torch.any(pos):
-            return np.zeros(0, dtype=float), None, None
+            return torch.zeros(
+                0,
+                device=self.resolved_device_,
+                dtype=self.resolved_torch_dtype_,
+            ), None, None
 
         w_pos = w[pos]
         U_pos = U[:, pos]
@@ -189,13 +197,13 @@ class ApproximateTorchClusterAlgorithm(BaseClusterAlgorithm):
         S_new = torch.diag(lam)
 
         singular_vals = torch.sqrt(lam[: min(self.r_target, len(lam))])
-        return singular_vals.detach().cpu().numpy(), Q_new, S_new
+        return singular_vals, Q_new, S_new
 
     def _order_and_prepare_first_block(
         self,
         blocks: List[np.ndarray],
         tensor_blocks: List["torch.Tensor"],
-        norms_blocks: List[float],
+        norms_blocks: "torch.Tensor",
         available_indices: List[int],
     ) -> tuple:
         if self.sorting_strategy == "norm":
@@ -241,10 +249,14 @@ class ApproximateTorchClusterAlgorithm(BaseClusterAlgorithm):
                 if i not in indeces_block0:
                     Y = Q.T @ tensor_blocks[i]
                     R = tensor_blocks[i] - Q @ Y
-                    residual_info.append((torch.linalg.norm(R, ord="fro").item(), i))
+                    residual_info.append((torch.linalg.norm(R, ord="fro"), i))
 
-            residual_info.sort()
-            ordered_indices = [i for _, i in residual_info]
+            if residual_info:
+                residual_norms = torch.stack([norm for norm, _ in residual_info])
+                sort_order = torch.argsort(residual_norms)
+                ordered_indices = [residual_info[i][1] for i in sort_order.tolist()]
+            else:
+                ordered_indices = []
             get_next_idx = lambda k: ordered_indices[k]
 
         return (indeces_block0, norm_M, Q, S, ordered_indices, get_next_idx)
@@ -253,7 +265,7 @@ class ApproximateTorchClusterAlgorithm(BaseClusterAlgorithm):
         self,
         blocks: List[np.ndarray],
         tensor_blocks: List["torch.Tensor"],
-        norms_blocks: List[float],
+        norms_blocks: "torch.Tensor",
         available_indices: List[int],
     ) -> Tuple[int, List[int]]:
         (
@@ -274,7 +286,7 @@ class ApproximateTorchClusterAlgorithm(BaseClusterAlgorithm):
             singular_vals, Q, S = self._update_top_singular_values(
                 tensor_blocks[next_idx], Q=Q, S=S
             )
-            lower_bound = sum(float(sigma) ** 2 for sigma in singular_vals)
+            lower_bound = torch.sum(singular_vals ** 2).item()
 
             error = (
                 0.0
@@ -304,12 +316,10 @@ class ApproximateTorchClusterAlgorithm(BaseClusterAlgorithm):
         random.seed(self.random_seed)
 
         tensor_blocks = [self._to_tensor(block) for block in blocks]
-        norms_blocks = [
-            torch.linalg.norm(block, ord="fro").item() for block in tensor_blocks
-        ]
-        available_indices = sorted(
-            range(len(blocks)), key=lambda i: norms_blocks[i], reverse=True
+        norms_blocks = torch.stack(
+            [torch.linalg.norm(block, ord="fro") for block in tensor_blocks]
         )
+        available_indices = torch.argsort(norms_blocks, descending=True).tolist()
 
         clusters = []
         i_cluster_ones = 0
@@ -386,12 +396,10 @@ class ApproximateTorchClusterAlgorithm(BaseClusterAlgorithm):
         )
 
         tensor_blocks = [self._to_tensor(block) for block in blocks]
-        norms_blocks = [
-            torch.linalg.norm(block, ord="fro").item() for block in tensor_blocks
-        ]
-        available_indices = sorted(
-            range(len(blocks)), key=lambda i: norms_blocks[i], reverse=True
+        norms_blocks = torch.stack(
+            [torch.linalg.norm(block, ord="fro") for block in tensor_blocks]
         )
+        available_indices = torch.argsort(norms_blocks, descending=True).tolist()
 
         (
             _indeces_block0,
@@ -404,7 +412,11 @@ class ApproximateTorchClusterAlgorithm(BaseClusterAlgorithm):
             blocks, tensor_blocks, norms_blocks, available_indices
         )
 
-        singular_vals = np.zeros(0, dtype=float)
+        singular_vals = torch.zeros(
+            0,
+            device=self.resolved_device_,
+            dtype=self.resolved_torch_dtype_,
+        )
         for k in range(len(ordered_indices)):
             next_idx = get_next_idx(k)
             norm_M += norms_blocks[next_idx] ** 2
@@ -412,7 +424,7 @@ class ApproximateTorchClusterAlgorithm(BaseClusterAlgorithm):
                 tensor_blocks[next_idx], Q=Q, S=S
             )
 
-        lower_bound = sum(float(sigma) ** 2 for sigma in singular_vals)
+        lower_bound = torch.sum(singular_vals ** 2).item()
         error = (
             0.0 if lower_bound >= norm_M else ((norm_M - lower_bound) / norm_M) ** 0.5
         )
