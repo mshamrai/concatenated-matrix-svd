@@ -67,6 +67,15 @@ Incrementally updates approximate singular values without forming the full matri
 python -m src.main --dataset qualcomm --data_path <path> --algorithm approximate --sorting_strategy residual --r_target 20 --eps 0.05
 ```
 
+### 4. **Approximate Torch Algorithm**
+Torch-backed version of the approximate algorithm with explicit device selection.
+
+```bash
+python -m src.main --dataset qualcomm --data_path <path> --algorithm approximate_torch --sorting_strategy residual --r_target 20 --eps 0.05 --device auto
+```
+
+Valid `--device` values include `auto`, `cpu`, `cuda`, `cuda:0`, and `mps`.
+
 ### Baseline Methods
 
 - **Random**: Random clustering
@@ -148,6 +157,7 @@ bash run_experiments_scatter.sh
 Key parameters:
 - `--dataset`: Dataset to use (`qualcomm`, `bigearth`, `pdebench`, `smolvlm`)
 - `--algorithm`: Clustering method (`approximate`, `max_norm`, `residuals`, `kmeans`, `hdbscan`, `random`)
+- `--device`: Torch device for `approximate_torch` (`auto`, `cpu`, `cuda`, `cuda:N`, `mps`)
 - `--eps`: Error threshold (e.g., 0.05 for 5% relative error)
 - `--r_target`: Target rank for low-rank approximation
 - `--sorting_strategy`: Block ordering strategy (`norm` or `residual`)

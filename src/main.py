@@ -42,7 +42,7 @@ def main():
     
     # Algorithm arguments
     parser.add_argument('--algorithm', type=str, required=True,
-                        choices=['approximate', 'max_norm', 'residuals', 'kmeans', 'hdbscan', 'random'],
+                        choices=['approximate', 'approximate_torch', 'max_norm', 'residuals', 'kmeans', 'hdbscan', 'random'],
                         help='Clustering algorithm to use')
     parser.add_argument('--eps', type=float, default=0.1,
                         help='Error threshold for clustering')
@@ -63,6 +63,10 @@ def main():
                         help='Oversampling parameter for approximate algorithm')
     parser.add_argument('--tol', type=float, default=1e-12,
                         help='Tolerance for approximate algorithm')
+    parser.add_argument('--device', type=str, default='auto',
+                        help='Torch device for approximate_torch: auto, cpu, cuda, cuda:N, or mps')
+    parser.add_argument('--torch_dtype', type=str, default='float32',
+                        help='Torch dtype for approximate_torch, e.g. float32 or float64')
     
     # KMeans and Random-specific arguments
     parser.add_argument('--n_clusters', type=int, default=10,
@@ -94,7 +98,7 @@ def main():
                         help='Target dimension for SmolVLM weight reshaping')
     
     args = parser.parse_args()
-    
+
     # Prepare dataset-specific kwargs
     data_kwargs = {'data_path': args.data_path}
     if args.dataset == 'qualcomm':
@@ -147,6 +151,14 @@ def main():
     if args.algorithm == 'approximate':
         algo_kwargs['oversampling'] = args.oversampling
         algo_kwargs['tol'] = args.tol
+
+    if args.algorithm == 'approximate_torch':
+        algo_kwargs['r_target'] = args.r_target
+        algo_kwargs['sorting_strategy'] = args.sorting_strategy
+        algo_kwargs['oversampling'] = args.oversampling
+        algo_kwargs['tol'] = args.tol
+        algo_kwargs['device'] = args.device
+        algo_kwargs['torch_dtype'] = args.torch_dtype
     
     if args.algorithm == 'kmeans':
         algo_kwargs['n_clusters'] = args.n_clusters
@@ -170,6 +182,14 @@ def main():
     start_time = time.time()
     clustering.fit(blocks)
     clustering_time = time.time() - start_time
+
+    if args.algorithm == 'approximate_torch':
+        print(
+            "Resolved torch runtime: "
+            f"requested_device={args.device}, "
+            f"resolved_device={clustering.resolved_device_}, "
+            f"dtype={clustering.resolved_torch_dtype_}"
+        )
     
     clusters = clustering.clusters_
     print(f"\nClustering completed in {clustering_time:.2f} seconds")

@@ -1,6 +1,6 @@
 import numpy as np
 import torch
-from transformers import AutoProcessor, AutoModelForImageTextToText
+from transformers import AutoModelForImageTextToText
 from .base import BaseDataReader
 
 
@@ -37,8 +37,7 @@ class SmolVLMDataReader(BaseDataReader):
         """
         print(f"Loading SmolVLM model from {self.model_path}")
         
-        # Load model
-        processor = AutoProcessor.from_pretrained(self.model_path)
+        # Load model weights only; the processor is not needed for extracting parameters.
         model = AutoModelForImageTextToText.from_pretrained(
             self.model_path,
             torch_dtype=self.dtype,
