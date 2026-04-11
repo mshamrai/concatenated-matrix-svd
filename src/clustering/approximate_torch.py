@@ -244,17 +244,27 @@ class ApproximateTorchClusterAlgorithm(BaseClusterAlgorithm):
 
             singular_vals, Q, S = self._update_top_singular_values(block0)
 
-            residual_info = []
-            for i in available_indices:
-                if i not in indeces_block0:
-                    Y = Q.T @ tensor_blocks[i]
-                    R = tensor_blocks[i] - Q @ Y
-                    residual_info.append((torch.linalg.norm(R, ord="fro"), i))
+            if available_indices:
+                candidate_blocks = [tensor_blocks[idx] for idx in available_indices]
+                candidate_widths = [block.shape[1] for block in candidate_blocks]
+                concatenated_candidates = torch.hstack(candidate_blocks)
+                projected_candidates = Q.T @ concatenated_candidates
 
-            if residual_info:
-                residual_norms = torch.stack([norm for norm, _ in residual_info])
-                sort_order = torch.argsort(residual_norms)
-                ordered_indices = [residual_info[i][1] for i in sort_order.tolist()]
+                projected_norm_squares = torch.stack(
+                    [
+                        torch.sum(projected_block * projected_block)
+                        for projected_block in torch.split(
+                            projected_candidates, candidate_widths, dim=1
+                        )
+                    ]
+                )
+                candidate_norm_squares = norms_blocks[available_indices] ** 2
+                residual_norm_squares = torch.clamp(
+                    candidate_norm_squares - projected_norm_squares,
+                    min=0.0,
+                )
+                sort_order = torch.argsort(residual_norm_squares)
+                ordered_indices = [available_indices[i] for i in sort_order.tolist()]
             else:
                 ordered_indices = []
             get_next_idx = lambda k: ordered_indices[k]
