@@ -245,24 +245,37 @@ class ApproximateTorchClusterAlgorithm(BaseClusterAlgorithm):
             singular_vals, Q, S = self._update_top_singular_values(block0)
 
             if available_indices:
-                candidate_blocks = [tensor_blocks[idx] for idx in available_indices]
-                candidate_widths = [block.shape[1] for block in candidate_blocks]
-                concatenated_candidates = torch.hstack(candidate_blocks)
-                projected_candidates = Q.T @ concatenated_candidates
+                width_groups = {}
+                for idx in available_indices:
+                    width_groups.setdefault(tensor_blocks[idx].shape[1], []).append(idx)
 
-                projected_norm_squares = torch.stack(
-                    [
-                        torch.sum(projected_block * projected_block)
-                        for projected_block in torch.split(
-                            projected_candidates, candidate_widths, dim=1
+                residual_norm_squares = torch.empty(
+                    len(available_indices),
+                    device=self.resolved_device_,
+                    dtype=self.resolved_torch_dtype_,
+                )
+                candidate_positions = {
+                    idx: pos for pos, idx in enumerate(available_indices)
+                }
+
+                for width, group_indices in width_groups.items():
+                    stacked_blocks = torch.stack(
+                        [tensor_blocks[idx].T for idx in group_indices], dim=0
+                    )
+                    projected_blocks = torch.matmul(stacked_blocks, Q)
+                    projected_norm_squares = torch.sum(
+                        projected_blocks * projected_blocks, dim=(1, 2)
+                    )
+                    candidate_norm_squares = norms_blocks[group_indices] ** 2
+                    group_residual_norm_squares = torch.clamp(
+                        candidate_norm_squares - projected_norm_squares,
+                        min=0.0,
+                    )
+                    for offset, idx in enumerate(group_indices):
+                        residual_norm_squares[candidate_positions[idx]] = (
+                            group_residual_norm_squares[offset]
                         )
-                    ]
-                )
-                candidate_norm_squares = norms_blocks[available_indices] ** 2
-                residual_norm_squares = torch.clamp(
-                    candidate_norm_squares - projected_norm_squares,
-                    min=0.0,
-                )
+
                 sort_order = torch.argsort(residual_norm_squares)
                 ordered_indices = [available_indices[i] for i in sort_order.tolist()]
             else:
