@@ -373,8 +373,9 @@ class ApproximateTorchClusterAlgorithm(BaseClusterAlgorithm):
             cluster = [(idx, blocks[idx]) for idx in cluster_indices]
             clusters.append(cluster)
             pbar.update(len(cluster_indices))
+            cluster_index_set = set(cluster_indices)
             available_indices = [
-                idx for idx in available_indices if idx not in cluster_indices
+                idx for idx in available_indices if idx not in cluster_index_set
             ]
 
         pbar.close()
