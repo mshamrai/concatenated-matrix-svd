@@ -6,6 +6,10 @@ Official implementation of **"Concatenated Matrix SVD: Compression Bounds, Incre
 
 This repository provides algorithms for clustering matrix blocks under error constraints, with applications to data compression, neural network weight compression, and scientific data analysis. The methods enable efficient low-rank approximation of concatenated matrices without explicitly forming the full matrix.
 
+## Update
+
+🎉 The accompanying paper has been [published in **TMLR**.](https://openreview.net/pdf?id=E9n35dehqx)
+
 ## Overview
 
 The concatenated matrix SVD problem arises when we have a collection of matrices (data blocks) that we want to cluster and compress using low-rank approximations, subject to reconstruction error constraints. This work presents:
@@ -199,11 +203,13 @@ This work uses datasets from:
 
 ## Citation
 ```
-@article{shamrai2026concatenated,
-  title={Concatenated Matrix SVD: Compression Bounds, Incremental Approximation, and Error-Constrained Clustering},
-  author={Shamrai, Maksym},
-  journal={arXiv preprint arXiv:2601.11626},
-  year={2026},
-  url={https://arxiv.org/abs/2601.11626}
+@article{
+    shamrai2026concatenated,
+    title={Concatenated Matrix {SVD}: Compression Bounds, Incremental Approximation, and Error-Constrained Clustering},
+    author={Maksym Shamrai},
+    journal={Transactions on Machine Learning Research},
+    issn={2835-8856},
+    year={2026},
+    url={https://openreview.net/forum?id=E9n35dehqx}
 }
 ```
